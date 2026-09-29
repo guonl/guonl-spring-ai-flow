@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.guonl.flow.db.mapper.AssistantSessionMapper">
+
+    <resultMap id="BaseResultMap" type="com.guonl.flow.db.entity.AssistantSessionDO">
+        <id column="id" property="id"/>
+        <result column="conversation_id" property="conversationId"/>
+        <result column="title" property="title"/>
+        <result column="message_count" property="messageCount"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.guonl.flow.db.entity.AssistantSessionDO"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO assistant_session (conversation_id, title, message_count)
+        VALUES (#{conversationId}, #{title}, #{messageCount})
+    </insert>
+
+    <select id="findByConversation" resultMap="BaseResultMap">
+        SELECT id, conversation_id, title, message_count, created_at, updated_at
+        FROM assistant_session
+        WHERE conversation_id = #{conversationId}
+    </select>
+
+    <select id="listRecent" resultMap="BaseResultMap">
+        SELECT id, conversation_id, title, message_count, created_at, updated_at
+        FROM assistant_session
+        ORDER BY updated_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <update id="updateTitle">
+        UPDATE assistant_session SET title = #{title} WHERE conversation_id = #{conversationId}
+    </update>
+
+    <update id="incrMessageCount">
+        UPDATE assistant_session SET message_count = message_count + #{delta}
+        WHERE conversation_id = #{conversationId}
+    </update>
+
+    <delete id="deleteByConversation">
+        DELETE FROM assistant_session WHERE conversation_id = #{conversationId}
+    </delete>
+</mapper>

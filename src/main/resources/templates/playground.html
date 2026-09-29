@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>场景体验 · Spring AI Flow</title>
+  <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/flow.css}">
+</head>
+<body>
+<div class="app">
+  <div th:replace="~{fragments/layout :: sidebar('playground')}"></div>
+  <div class="main">
+    <header th:replace="~{fragments/layout :: topbar('场景体验')}"></header>
+
+    <main class="pg-layout">
+      <!-- 左：场景输入 -->
+      <section>
+        <div class="card card-pad">
+          <div class="pg-tabs" id="pgTabs">
+            <button class="pg-tab active" data-scene="text">📝 文本</button>
+            <button class="pg-tab" data-scene="image">🖼️ 图片</button>
+            <button class="pg-tab" data-scene="json">🧩 JSON</button>
+            <button class="pg-tab" data-scene="excel">📊 Excel</button>
+            <button class="pg-tab" data-scene="combined">🧬 组合</button>
+          </div>
+
+          <form id="pgForm">
+            <div class="field">
+              <label>处理指令 <span class="text-3" style="font-weight:400">（告诉模型做什么）</span></label>
+              <textarea class="textarea" id="fPrompt" rows="3" placeholder="例如：请从以下文本中提取客户姓名与购买意向，并评估成交概率"></textarea>
+            </div>
+
+            <!-- 场景相关输入（JS 控制显隐） -->
+            <div class="field" id="grp-text">
+              <label>输入文本</label>
+              <textarea class="textarea mono" id="fText" rows="5" placeholder="粘贴要处理的文本内容…"></textarea>
+            </div>
+            <div id="grp-image">
+              <div class="field">
+                <label>图片 URL</label>
+                <input class="input" id="fImageUrl" placeholder="https://example.com/photo.png">
+              </div>
+              <div class="field">
+                <label>或上传图片</label>
+                <input class="input" type="file" id="fImage" accept="image/*">
+              </div>
+            </div>
+            <div class="field" id="grp-excel">
+              <label>Excel 文件</label>
+              <input class="input" type="file" id="fExcel" accept=".xlsx,.xls">
+            </div>
+
+            <!-- 输出契约 -->
+            <div class="field">
+              <label>输出类型</label>
+              <select class="select" id="fOutputType">
+                <option value="json">JSON 结构化</option>
+                <option value="text">纯文本</option>
+              </select>
+            </div>
+            <div class="field" id="grp-fields">
+              <label>字段契约 <span class="text-3" style="font-weight:400">（每行一个：字段名|说明|必填，必填填1）</span></label>
+              <textarea class="textarea mono" id="fFields" rows="4" placeholder="company_name|公司名称|1&#10;tax_no|统一社会信用代码|1"></textarea>
+            </div>
+
+            <!-- 高级参数 -->
+            <details style="margin:4px 0 14px">
+              <summary style="font-size:12.5px; color:var(--text-2); cursor:pointer; font-weight:600">高级参数</summary>
+              <div class="field mt-8">
+                <label>系统提示词</label>
+                <textarea class="textarea" id="fSystemPrompt" rows="2" placeholder="留空使用默认系统提示词"></textarea>
+              </div>
+              <div class="flex gap-8">
+                <div class="field flex-1">
+                  <label>模型覆盖</label>
+                  <input class="input mono" id="fModel" placeholder="留空使用默认">
+                </div>
+                <div class="field" style="width:110px">
+                  <label>温度</label>
+                  <input class="input" type="number" id="fTemperature" min="0" max="2" step="0.1" placeholder="0.7">
+                </div>
+              </div>
+            </details>
+
+            <div class="flex items-center gap-10">
+              <button type="submit" class="btn btn-primary flex-1" id="btnRun" style="padding:10px">▶ 运行场景</button>
+              <label class="flex items-center gap-8" style="font-size:12.5px; color:var(--text-2); cursor:pointer; white-space:nowrap">
+                <input type="checkbox" id="fStream" checked> 打字机流式
+              </label>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- 右：结果 -->
+      <section>
+        <div class="card card-pad" style="min-height:420px; display:flex; flex-direction:column">
+          <div class="pg-result-head">
+            <div class="card-title" style="margin:0" id="pgTitle">输出结果</div>
+            <span id="pgBadge"></span>
+            <div class="flex flex-1"></div>
+            <span class="text-3 mono" style="font-size:11.5px" id="pgMeta"></span>
+          </div>
+          <div class="output-block flex-1" id="pgOutput" style="min-height:360px">选择一个场景，输入内容后点击「运行场景」，模型输出将实时显示在这里。</div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<div id="toastWrap"></div>
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/playground.js}"></script>
+</body>
+</html>

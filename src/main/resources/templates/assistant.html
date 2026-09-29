@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 助手 · Spring AI Flow</title>
+  <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/flow.css}">
+  <link rel="stylesheet" th:href="@{/css/assistant.css}">
+</head>
+<body>
+<div class="app">
+  <div th:replace="~{fragments/layout :: sidebar('assistant')}"></div>
+  <div class="main">
+    <header th:replace="~{fragments/layout :: topbar('AI 助手')}"></header>
+
+    <main class="page assistant-page">
+      <!-- 会话主区（AssistantChat 挂载点：会话侧栏 + 对话流 + 输入框） -->
+      <div class="ac-host" id="assistantHost"></div>
+
+      <!-- 快捷指令与小贴士 -->
+      <aside class="ac-quick">
+        <div class="ac-quick-card">
+          <h3>⚡ 快捷指令</h3>
+          <button type="button" data-q="这个平台能做什么？">🌱 平台能力介绍</button>
+          <button type="button" data-q="看看最近的运行情况">📈 最近运行情况</button>
+          <button type="button" data-q="帮我查一下流程列表">📚 流程列表</button>
+          <button type="button" data-q="如何创建一个流程？">🧭 新建流程引导</button>
+          <button type="button" data-q="条件路由怎么配置？">🔀 条件路由配置</button>
+          <button type="button" data-q="知识检索节点怎么用？">📚 知识检索用法</button>
+        </div>
+        <div class="ac-quick-card">
+          <h3>💡 小贴士</h3>
+          <p>粘贴运行 ID（如 <code>r_xxx</code>）并问「为什么失败」，助手会定位失败节点并给出排查建议。</p>
+          <p>问「统计」可查看总运行数、成功率、Token 消耗等汇总指标。</p>
+          <p>会话历史自动保存，可随时切换、重命名或删除。</p>
+        </div>
+      </aside>
+    </main>
+  </div>
+</div>
+<div id="toastWrap"></div>
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/assistant-chat.js}"></script>
+<script>
+  const pageChat = new AssistantChat(document.getElementById('assistantHost'), { mode: 'page' });
+  document.querySelectorAll('.ac-quick [data-q]').forEach((btn) => {
+    btn.addEventListener('click', () => pageChat.send(btn.dataset.q));
+  });
+</script>
+</body>
+</html>

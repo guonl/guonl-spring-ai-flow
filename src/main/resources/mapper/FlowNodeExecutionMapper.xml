@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.guonl.flow.db.mapper.FlowNodeExecutionMapper">
+
+    <resultMap id="BaseResultMap" type="com.guonl.flow.db.entity.FlowNodeExecutionDO">
+        <id column="id" property="id"/>
+        <result column="run_id" property="runId"/>
+        <result column="seq" property="seq"/>
+        <result column="node_id" property="nodeId"/>
+        <result column="node_name" property="nodeName"/>
+        <result column="node_type" property="nodeType"/>
+        <result column="status" property="status"/>
+        <result column="output" property="output"/>
+        <result column="parsed_json" property="parsedJson"/>
+        <result column="error" property="error"/>
+        <result column="model" property="model"/>
+        <result column="prompt_tokens" property="promptTokens"/>
+        <result column="completion_tokens" property="completionTokens"/>
+        <result column="total_tokens" property="totalTokens"/>
+        <result column="cost_millis" property="costMillis"/>
+        <result column="tool_calls" property="toolCalls"/>
+        <result column="start_at" property="startAt"/>
+        <result column="end_at" property="endAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, run_id, seq, node_id, node_name, node_type, status, output, parsed_json,
+        error, model, prompt_tokens, completion_tokens, total_tokens, cost_millis, tool_calls, start_at, end_at
+    </sql>
+
+    <insert id="insertBatch">
+        INSERT INTO flow_node_execution (run_id, seq, node_id, node_name, node_type, status, output, parsed_json,
+                                         error, model, prompt_tokens, completion_tokens, total_tokens,
+                                         cost_millis, tool_calls, start_at, end_at)
+        VALUES
+        <foreach collection="nodes" item="n" separator=",">
+            (#{n.runId}, #{n.seq}, #{n.nodeId}, #{n.nodeName}, #{n.nodeType}, #{n.status}, #{n.output}, #{n.parsedJson},
+             #{n.error}, #{n.model}, #{n.promptTokens}, #{n.completionTokens}, #{n.totalTokens},
+             #{n.costMillis}, #{n.toolCalls}, #{n.startAt}, #{n.endAt})
+        </foreach>
+    </insert>
+
+    <!-- 节点状态写穿更新：status/耗时/时间恒更新，其余仅在非空时覆盖 -->
+    <update id="updateState" parameterType="com.guonl.flow.db.entity.FlowNodeExecutionDO">
+        UPDATE flow_node_execution
+        <set>
+            status = #{status},
+            <if test="output != null">output = #{output},</if>
+            <if test="parsedJson != null">parsed_json = #{parsedJson},</if>
+            <if test="error != null">error = #{error},</if>
+            <if test="model != null">model = #{model},</if>
+            <if test="promptTokens != null">prompt_tokens = #{promptTokens},</if>
+            <if test="completionTokens != null">completion_tokens = #{completionTokens},</if>
+            <if test="totalTokens != null">total_tokens = #{totalTokens},</if>
+            <if test="toolCalls != null">tool_calls = #{toolCalls},</if>
+            cost_millis = #{costMillis},
+            start_at = #{startAt},
+            end_at = #{endAt},
+        </set>
+        WHERE run_id = #{runId} AND node_id = #{nodeId}
+    </update>
+
+    <select id="findByRunId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM flow_node_execution
+        WHERE run_id = #{runId}
+        ORDER BY seq ASC
+    </select>
+
+    <select id="findByRunIds" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM flow_node_execution
+        WHERE run_id IN
+        <foreach collection="runIds" item="rid" open="(" separator="," close=")">
+            #{rid}
+        </foreach>
+        ORDER BY run_id ASC, seq ASC
+    </select>
+</mapper>

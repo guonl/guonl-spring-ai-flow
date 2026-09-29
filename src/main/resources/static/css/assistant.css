@@ -1,0 +1,338 @@
+/* ============================================================
+   assistant.css —— AI 助手（悬浮按钮 / 抽屉 / 独立页）
+   组件前缀：#aiFab 悬浮按钮 · #aiDrawer 抽屉容器 · ac-* 聊天组件
+   全部使用 flow.css 的设计 tokens，三主题自动适配
+   ============================================================ */
+
+/* ---------- 悬浮按钮（common.js 注入） ---------- */
+#aiFab {
+  position: fixed; right: 22px; bottom: var(--fab-offset, 54px); z-index: 9998;
+  width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--grad); color: #fff; box-shadow: 0 6px 20px var(--glow-strong);
+  display: flex; align-items: center; justify-content: center;
+  animation: fab-in .55s cubic-bezier(.34, 1.56, .64, 1) backwards;
+  transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), box-shadow .2s;
+}
+#aiFab:hover { transform: translateY(-3px) scale(1.06); box-shadow: 0 10px 30px var(--glow-strong); }
+#aiFab:active { transform: translateY(-1px) scale(.93); }
+#aiFab svg { width: 25px; height: 25px; fill: currentColor; }
+#aiFab:hover svg { animation: fab-wiggle .55s ease; }
+
+/* 常态呼吸光晕：渐变光环周期性向外扩散，暗示 AI 在线 */
+#aiFab::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: var(--grad); pointer-events: none;
+  animation: fab-pulse 2.8s ease-out infinite;
+}
+/* 抽屉打开：按钮旋转 135° 变"激活"姿态，光晕暂停 */
+#aiFab.active, #aiFab.active:hover { transform: rotate(135deg); }
+#aiFab.active:active { transform: rotate(135deg) scale(.93); }
+#aiFab.active::before { animation-play-state: paused; opacity: 0; transition: opacity .2s; }
+
+@keyframes fab-in {
+  from { opacity: 0; transform: translateY(26px) scale(.4); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fab-pulse {
+  0% { transform: scale(1); opacity: .4; }
+  70%, 100% { transform: scale(1.6); opacity: 0; }
+}
+@keyframes fab-wiggle {
+  0%, 100% { transform: rotate(0); }
+  30% { transform: rotate(-14deg) scale(1.12); }
+  65% { transform: rotate(11deg) scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #aiFab, #aiFab::before, #aiFab:hover svg { animation: none !important; transition-duration: .01s !important; }
+}
+#aiFab .ai-fab-badge {
+  position: absolute; top: -3px; right: -3px; min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 9px; background: var(--failed); color: #fff; font-size: 10.5px; font-weight: 700;
+  font-style: normal; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+}
+
+/* ---------- 抽屉容器（无遮罩，不阻挡页面操作） ---------- */
+#aiDrawer { position: fixed; inset: 0; z-index: 9998; pointer-events: none; }
+#aiDrawer .ai-drawer-panel {
+  position: absolute; right: 22px; bottom: calc(var(--fab-offset, 54px) + 64px);
+  width: 430px; max-width: calc(100vw - 32px);
+  height: min(620px, calc(100vh - var(--fab-offset, 54px) - 110px));
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: var(--shadow-lg); overflow: hidden;
+  opacity: 0; transform: translateY(18px) scale(.95); transform-origin: bottom right;
+  transition: opacity .2s ease, transform .32s cubic-bezier(.34, 1.56, .64, 1); pointer-events: none;
+}
+#aiDrawer.open .ai-drawer-panel { opacity: 1; transform: none; pointer-events: auto; }
+/* 注意：AssistantChat 会把容器自身加上 .ac-root 类（面板即 .ac-root），
+   因此不要再写 "#aiDrawer .ac-root { height:100% }" —— 它与面板规则同特异性且靠后，
+   会把面板高度覆盖成 100% × #aiDrawer = 100vh，导致头部越出视口顶部。 */
+
+/* ---------- 聊天组件根布局 ---------- */
+.ac-root { position: relative; display: flex; height: 100%; min-height: 0; font-size: 13.5px; background: var(--bg-card); color: var(--text); }
+
+/* 会话侧栏（page 常驻 / drawer 抽出式） */
+.ac-side {
+  display: flex; flex-direction: column; min-height: 0;
+  width: 228px; flex-shrink: 0;
+  background: var(--bg-soft); border-right: 1px solid var(--border);
+}
+.ac-root.ac-drawer .ac-side {
+  position: absolute; left: 0; top: 0; bottom: 0; z-index: 3;
+  transform: translateX(-102%); transition: transform .2s ease;
+  box-shadow: var(--shadow-lg);
+}
+.ac-root.ac-drawer.side-open .ac-side { transform: none; }
+.ac-side-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 12px 8px 14px; font-size: 12.5px; font-weight: 700; color: var(--text-2);
+}
+.ac-side-list { flex: 1; overflow-y: auto; padding: 4px 8px 12px; display: flex; flex-direction: column; gap: 4px; }
+.ac-side-empty { padding: 24px 10px; text-align: center; font-size: 12px; color: var(--text-3); line-height: 1.8; }
+.ac-item {
+  position: relative; padding: 8px 10px; border-radius: 9px; cursor: pointer;
+  display: flex; align-items: center; gap: 6px; border: 1px solid transparent;
+  transition: background .12s;
+}
+.ac-item:hover { background: var(--bg-inset); }
+.ac-item.active { background: var(--bg-card); border-color: var(--border); box-shadow: var(--shadow); }
+.ac-item-main { flex: 1; min-width: 0; }
+.ac-item-title { font-size: 12.8px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-item-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.ac-item-acts { display: none; gap: 2px; flex-shrink: 0; }
+.ac-item:hover .ac-item-acts, .ac-item.active .ac-item-acts { display: flex; }
+.ac-mini {
+  border: none; background: transparent; color: var(--text-3); cursor: pointer;
+  font-size: 11.5px; padding: 2px 5px; border-radius: 6px; font-family: var(--font);
+  transition: all .12s; flex-shrink: 0;
+}
+.ac-mini:hover { background: var(--bg-inset); color: var(--primary); }
+.ac-item .ac-mini[data-act="del"]:hover { color: var(--failed); }
+
+/* 右侧聊天主区 */
+.ac-chat { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.ac-head {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.ac-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.ac-badge {
+  font-size: 10.5px; font-weight: 700; padding: 1.5px 7px; border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary);
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ac-badge.mock { background: color-mix(in srgb, var(--c-json) 16%, transparent); color: var(--c-json); }
+.ac-head-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+.ac-icon-btn {
+  width: 28px; height: 28px; border-radius: 8px; border: none; background: transparent;
+  color: var(--text-3); cursor: pointer; font-size: 14.5px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+  font-family: var(--font); transition: all .12s;
+}
+.ac-icon-btn:hover { background: var(--bg-inset); color: var(--primary); }
+.ac-root.ac-page .ac-side-toggle { display: none; } /* 独立页宽屏侧栏常驻，无需切换 */
+
+/* 消息区 */
+.ac-msgs {
+  flex: 1; overflow-y: auto; min-height: 0;
+  padding: 16px; display: flex; flex-direction: column; gap: 14px;
+}
+.ac-banner {
+  padding: 10px 14px; border-radius: 10px; font-size: 12.8px;
+  background: color-mix(in srgb, var(--c-json) 10%, var(--bg-soft));
+  border: 1px solid color-mix(in srgb, var(--c-json) 35%, transparent); color: var(--text-2);
+}
+
+/* 欢迎卡与快捷 chips */
+.ac-welcome { margin: auto 0; text-align: center; padding: 10px 8px; }
+.ac-welcome-logo {
+  width: 46px; height: 46px; margin: 0 auto 10px; border-radius: 14px;
+  background: var(--grad); color: #fff; font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 18px var(--glow);
+}
+.ac-welcome-title { font-size: 16px; font-weight: 700; }
+.ac-welcome-sub { font-size: 12.5px; color: var(--text-2); margin: 6px auto 0; max-width: 300px; line-height: 1.7; }
+.ac-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
+.ac-chip {
+  border: 1px solid var(--border-strong); background: var(--bg-card); color: var(--text-2);
+  font-size: 12px; padding: 6px 12px; border-radius: 999px; cursor: pointer; font-family: var(--font);
+  transition: all .12s;
+}
+.ac-chip:hover { border-color: var(--primary-2); color: var(--primary); background: var(--bg-hover); }
+
+/* 消息气泡 */
+.ac-msg { display: flex; gap: 10px; }
+.ac-msg.user { flex-direction: row-reverse; }
+.ac-avatar {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+  background: var(--grad); color: #fff;
+}
+.ac-msg.user .ac-avatar { background: var(--bg-inset); }
+.ac-col { display: flex; flex-direction: column; gap: 4px; min-width: 0; max-width: calc(100% - 40px); }
+.ac-msg.user .ac-col { align-items: flex-end; }
+.ac-bubble {
+  padding: 9px 13px; border-radius: 12px; line-height: 1.68;
+  background: var(--bg-soft); border: 1px solid var(--border);
+  word-break: break-word; overflow-wrap: anywhere;
+}
+.ac-msg.user .ac-bubble { background: var(--grad); color: #fff; border-color: transparent; }
+.ac-bubble.ac-error {
+  background: color-mix(in srgb, var(--failed) 7%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--failed) 35%, transparent); color: var(--failed);
+}
+.ac-retry {
+  margin-left: 10px; border: 1px solid currentColor; background: transparent; color: inherit;
+  font-size: 11.5px; padding: 2px 10px; border-radius: 999px; cursor: pointer; font-family: var(--font);
+  opacity: .85;
+}
+.ac-retry:hover { opacity: 1; }
+.ac-meta { display: flex; align-items: center; gap: 8px; padding: 0 4px; font-size: 11px; color: var(--text-3); }
+.ac-loading { display: inline-flex; gap: 4px; padding: 3px 0; }
+.ac-loading i { width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); animation: acBlink 1s infinite; }
+.ac-loading i:nth-child(2) { animation-delay: .16s; }
+.ac-loading i:nth-child(3) { animation-delay: .32s; }
+@keyframes acBlink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+/* 工具轨迹（可折叠） */
+.ac-tools {
+  font-size: 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg-soft); overflow: hidden;
+}
+.ac-tools summary { padding: 6px 12px; cursor: pointer; color: var(--text-2); user-select: none; }
+.ac-tools summary:hover { color: var(--primary); }
+.ac-tools-body { padding: 0 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+.ac-tool b { color: var(--c-tool); font-weight: 600; font-family: var(--mono); font-size: 11.5px; }
+.ac-tool pre {
+  margin: 4px 0 0; padding: 6px 9px; border-radius: 7px; background: var(--bg-inset);
+  font-family: var(--mono); font-size: 11px; color: var(--text-2);
+  max-height: 140px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+}
+
+/* ---------- 轻量 Markdown 元素 ---------- */
+.ac-bubble.md > :first-child { margin-top: 0; }
+.ac-bubble.md > :last-child { margin-bottom: 0; }
+.ac-bubble.md .ac-p { margin: 6px 0; }
+.ac-bubble.md .ac-h { margin: 12px 0 6px; font-size: 14.5px; font-weight: 700; line-height: 1.4; }
+.ac-bubble.md .ac-h:first-child { margin-top: 0; }
+.ac-bubble.md .ac-list { margin: 6px 0; padding-left: 20px; }
+.ac-bubble.md .ac-list li { margin: 3px 0; }
+.ac-bubble.md .ac-code {
+  font-family: var(--mono); font-size: 12px; padding: 1.5px 6px; border-radius: 6px;
+  background: var(--bg-inset); color: var(--primary); word-break: break-all;
+}
+.ac-msg.user .ac-bubble .ac-code { background: rgba(255, 255, 255, .18); color: #fff; }
+.ac-bubble.md .ac-pre {
+  margin: 8px 0; padding: 10px 12px; border-radius: 9px; background: var(--bg-inset);
+  overflow-x: auto; border: 1px solid var(--border);
+}
+.ac-bubble.md .ac-pre code { font-family: var(--mono); font-size: 12px; color: var(--text); white-space: pre; }
+.ac-bubble.md .ac-hr { border: none; border-top: 1px solid var(--border-strong); margin: 10px 0; }
+.ac-bubble.md .ac-quote {
+  margin: 6px 0; padding: 6px 12px; border-left: 3px solid var(--primary-2);
+  background: var(--bg-inset); border-radius: 0 8px 8px 0; color: var(--text-2);
+}
+.ac-bubble.md a { color: var(--primary); font-weight: 500; }
+.ac-bubble.md .ac-tbl { margin: 8px 0; overflow-x: auto; border: 1px solid var(--border); border-radius: 9px; }
+.ac-bubble.md .ac-tbl table { border-collapse: collapse; width: 100%; font-size: 12.3px; }
+.ac-bubble.md .ac-tbl th {
+  background: var(--bg-inset); padding: 6px 10px; text-align: left; font-weight: 600;
+  border-bottom: 1px solid var(--border-strong); white-space: nowrap;
+}
+.ac-bubble.md .ac-tbl td { padding: 5.5px 10px; border-top: 1px solid var(--border); }
+.ac-bubble.md .ac-tbl tr:first-child td { border-top: none; }
+
+/* ---------- 输入区 ---------- */
+.ac-inputbar {
+  display: flex; align-items: flex-end; gap: 8px;
+  padding: 10px 12px 6px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.ac-input {
+  flex: 1; resize: none; border: 1px solid var(--border-strong); border-radius: 10px;
+  padding: 9px 12px; font: inherit; font-size: 13.2px; line-height: 1.55; max-height: 120px;
+  background: var(--bg-soft); color: var(--text); transition: border .15s;
+}
+.ac-input::placeholder { color: var(--text-3); }
+.ac-input:focus { outline: none; border-color: var(--primary-2); background: var(--bg-card); }
+.ac-input:disabled { opacity: .6; }
+.ac-send {
+  width: 38px; height: 38px; border-radius: 10px; border: none; flex-shrink: 0; cursor: pointer;
+  background: var(--grad); color: #fff; font-size: 15px; transition: filter .15s, transform .1s;
+}
+.ac-send:hover { filter: brightness(1.08); }
+.ac-send.stop { background: var(--failed); }
+.ac-foot-hint { padding: 0 12px 8px; text-align: center; font-size: 10.8px; color: var(--text-3); flex-shrink: 0; }
+.ac-foot-hint a { color: var(--text-3); text-decoration: underline; }
+.ac-foot-hint a:hover { color: var(--primary); }
+
+/* ---------- P2 增强：贴图 / 反馈 / 重新生成 ---------- */
+.ac-inputbar { flex-wrap: wrap; }
+.ac-imgs {
+  flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 0 2px 6px;
+}
+.ac-img-item {
+  position: relative; width: 46px; height: 46px;
+  border-radius: 8px; overflow: hidden; border: 1px solid var(--border-strong); background: var(--bg-soft);
+}
+.ac-img-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ac-img-del {
+  position: absolute; top: 0; right: 0; width: 15px; height: 15px; padding: 0;
+  border: none; border-radius: 0 0 0 6px; background: rgba(0, 0, 0, .55);
+  color: #fff; font-size: 9px; line-height: 15px; cursor: pointer;
+}
+.ac-img-del:hover { background: var(--failed); }
+.ac-thumbs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.ac-thumb {
+  max-width: 120px; max-height: 90px; border-radius: 8px; display: block;
+  border: 1px solid rgba(255, 255, 255, .3);
+}
+.ac-fb-wrap { display: inline-flex; gap: 2px; }
+.ac-fb.on { color: var(--primary); background: var(--bg-inset); }
+.ac-regen { color: var(--text-2); }
+.ac-regen:hover { color: var(--primary); }
+
+/* ---------- 独立会话页（/assistant） ---------- */
+.assistant-page {
+  display: flex; gap: 14px; align-items: stretch;
+  height: calc(100vh - 52px - 37px);   /* topbar 52 + footer 37 */
+  max-width: 1500px; padding: 16px 28px;
+}
+.ac-host {
+  flex: 1; min-width: 0; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.ac-quick { width: 240px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; padding-bottom: 4px; }
+.ac-quick-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px;
+}
+.ac-quick-card h3 { font-size: 13px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.ac-quick-card [data-q] {
+  display: block; width: 100%; text-align: left; margin-bottom: 6px;
+  border: 1px solid var(--border); background: var(--bg-soft); color: var(--text-2);
+  font-size: 12.5px; padding: 8px 11px; border-radius: 9px; cursor: pointer; font-family: var(--font);
+  transition: all .12s;
+}
+.ac-quick-card [data-q]:hover { border-color: var(--primary-2); color: var(--primary); background: var(--bg-hover); }
+.ac-quick-card p { font-size: 12px; color: var(--text-2); line-height: 1.7; margin-bottom: 8px; }
+.ac-quick-card code {
+  font-family: var(--mono); font-size: 11px; background: var(--bg-inset);
+  padding: 1px 5px; border-radius: 5px; color: var(--primary);
+}
+
+/* ---------- 窄屏适配 ---------- */
+@media (max-width: 1100px) {
+  .ac-quick { display: none; }
+}
+@media (max-width: 640px) {
+  .ac-root.ac-page .ac-side {
+    position: absolute; left: 0; top: 0; bottom: 0; z-index: 3;
+    transform: translateX(-102%); transition: transform .2s ease; box-shadow: var(--shadow-lg);
+  }
+  .ac-root.ac-page.side-open .ac-side { transform: none; }
+  .ac-root.ac-page .ac-side-toggle { display: inline-flex; }
+  #aiDrawer .ai-drawer-panel { right: 12px; width: calc(100vw - 24px); }
+}

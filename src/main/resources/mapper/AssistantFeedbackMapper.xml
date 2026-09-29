@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.guonl.flow.db.mapper.AssistantFeedbackMapper">
+
+    <resultMap id="BaseResultMap" type="com.guonl.flow.db.entity.AssistantFeedbackDO">
+        <id column="id" property="id"/>
+        <result column="conversation_id" property="conversationId"/>
+        <result column="content_hash" property="contentHash"/>
+        <result column="rating" property="rating"/>
+        <result column="content_preview" property="contentPreview"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="upsert" parameterType="com.guonl.flow.db.entity.AssistantFeedbackDO">
+        INSERT INTO assistant_feedback (conversation_id, content_hash, rating, content_preview)
+        VALUES (#{conversationId}, #{contentHash}, #{rating}, #{contentPreview})
+        ON DUPLICATE KEY UPDATE rating = VALUES(rating), content_preview = VALUES(content_preview)
+    </insert>
+
+    <delete id="deleteByMsg">
+        DELETE FROM assistant_feedback
+        WHERE conversation_id = #{conversationId} AND content_hash = #{contentHash}
+    </delete>
+
+    <select id="listByConversation" resultMap="BaseResultMap">
+        SELECT id, conversation_id, content_hash, rating, content_preview, created_at, updated_at
+        FROM assistant_feedback
+        WHERE conversation_id = #{conversationId}
+    </select>
+
+    <delete id="deleteByConversation">
+        DELETE FROM assistant_feedback WHERE conversation_id = #{conversationId}
+    </delete>
+</mapper>

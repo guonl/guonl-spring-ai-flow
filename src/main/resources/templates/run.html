@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>运行流程 · Spring AI Flow</title>
+  <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/flow.css}">
+</head>
+<body>
+<div class="app">
+  <div th:replace="~{fragments/layout :: sidebar('flows')}"></div>
+  <div class="main">
+    <header th:replace="~{fragments/layout :: topbar('运行流程')}"></header>
+
+    <main class="run-layout">
+      <!-- 左：输入面板 -->
+      <section class="run-inputs">
+        <div class="card card-pad">
+          <div class="card-title" id="flowTitle">加载中…</div>
+          <p class="text-3 mb-16" id="flowDesc" style="font-size:12.5px; min-height:0"></p>
+
+          <form id="runForm">
+            <div class="field" id="grp-text">
+              <label>输入文本</label>
+              <textarea class="textarea" id="fText" rows="5" placeholder="输入要处理的文本内容…"></textarea>
+            </div>
+            <div class="field" id="grp-imageUrl">
+              <label>图片 URL</label>
+              <input class="input" id="fImageUrl" placeholder="https://example.com/photo.png">
+            </div>
+            <div class="field" id="grp-images">
+              <label>上传图片（可多选）</label>
+              <input class="input" type="file" id="fImages" accept="image/*" multiple>
+            </div>
+            <div class="field" id="grp-excel">
+              <label>Excel 文件</label>
+              <input class="input" type="file" id="fExcel" accept=".xlsx,.xls">
+              <span class="hint">支持 .xlsx / .xls，自动解析表头与数据行</span>
+            </div>
+            <div class="field" id="grp-audio">
+              <label>音频文件（可选，自动转录并入输入文本）</label>
+              <input class="input" type="file" id="fAudio" accept="audio/*">
+              <span class="hint">支持常见音频格式，转录文本与上方输入文本合并</span>
+            </div>
+            <div class="field" id="grp-conversation">
+              <label>会话ID（可选，多轮记忆）</label>
+              <input class="input" id="fConversationId" placeholder="如 conv-001，同一ID跨运行共享对话历史">
+              <span class="hint">带记忆的节点会携带同一会话ID下最近N轮对话历史</span>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnRun">▶ 提交运行</button>
+            <div class="hint mt-8" id="runHint" style="text-align:center"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- 右：DAG 执行视图 -->
+      <section class="run-dag">
+        <div class="card card-pad" style="min-height:320px">
+          <div class="flex items-center gap-10 mb-12">
+            <div class="card-title" style="margin:0">执行视图</div>
+            <span id="flowBadge"></span>
+            <div class="flex flex-1"></div>
+            <div class="run-summary" id="runSummary"></div>
+            <button type="button" class="btn btn-sm" id="btnAskDiagnose" style="display:none" title="把本次运行上下文预填给 AI 助手，协助诊断">🩺 问助手诊断</button>
+          </div>
+          <div class="progress-bar mb-16" id="progressBar" style="display:none"><i style="width:0%"></i></div>
+          <div class="dag-layers" id="dag">
+            <div class="empty" style="flex:1"><div class="big">🚀</div>提交运行后，这里将实时展示每个节点的执行状态</div>
+          </div>
+
+          <!-- 节点输出详情 -->
+          <div id="nodeDetail" style="display:none; margin-top:6px">
+            <div class="section-title" style="margin-top:10px">
+              <span id="ndTitle">节点输出</span>
+              <span class="more" id="ndMeta"></span>
+            </div>
+            <div id="ndTrace" class="tool-trace" style="display:none"></div>
+            <div class="output-block" id="ndOutput"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<div id="toastWrap"></div>
+<script th:inline="javascript">
+  window.__FLOW_ID__ = /*[[${flowId}]]*/ null;
+</script>
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/run.js}"></script>
+</body>
+</html>

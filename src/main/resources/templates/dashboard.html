@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>工作台 · Spring AI Flow</title>
+  <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/flow.css}">
+</head>
+<body>
+<div class="app">
+  <div th:replace="~{fragments/layout :: sidebar('home')}"></div>
+  <div class="main">
+    <header th:replace="~{fragments/layout :: topbar('工作台')}"></header>
+
+    <main class="page">
+      <!-- Hero -->
+      <section class="hero">
+        <h2>把业务场景，变成与大模型的通道</h2>
+        <p>用可视化画布编排文本理解、图片识别、JSON 处理、Excel 处理与组合处理五类 AI 节点，
+          支持串行、并行与自由组合的 DAG 执行，让 AI 参与到每一个业务环节。</p>
+      </section>
+
+      <!-- 运行统计 -->
+      <section class="stat-grid">
+        <div class="stat-card"><div class="num" id="stTotal">–</div><div class="lbl">运行总数</div></div>
+        <div class="stat-card"><div class="num" id="stRate">–</div><div class="lbl">成功率</div></div>
+        <div class="stat-card"><div class="num" id="stCost">–</div><div class="lbl">平均耗时</div></div>
+        <div class="stat-card"><div class="num" id="stTokens">–</div><div class="lbl">累计 Tokens</div></div>
+        <div class="stat-card"><div class="num" id="stCalls">–</div><div class="lbl">模型调用</div></div>
+      </section>
+
+      <!-- 五大场景 -->
+      <div class="section-title">五种单场景能力<span class="more">点击进入场景体验</span></div>
+      <section class="scene-grid">
+        <div class="scene-card" style="--dot: var(--c-text)" onclick="location.href='/playground?scene=text'">
+          <div class="ico">📝</div>
+          <h4>文本理解</h4>
+          <p>纯文字输入，理解语义并按格式化契约返回结果</p>
+        </div>
+        <div class="scene-card" style="--dot: var(--c-image)" onclick="location.href='/playground?scene=image'">
+          <div class="ico">🖼️</div>
+          <h4>图片识别</h4>
+          <p>图片上传或 URL 输入，多模态识别并结构化输出</p>
+        </div>
+        <div class="scene-card" style="--dot: var(--c-json)" onclick="location.href='/playground?scene=json'">
+          <div class="ico">🧩</div>
+          <h4>JSON 处理</h4>
+          <p>JSON 数据清洗、映射、抽取，格式化返回</p>
+        </div>
+        <div class="scene-card" style="--dot: var(--c-excel)" onclick="location.href='/playground?scene=excel'">
+          <div class="ico">📊</div>
+          <h4>Excel 处理</h4>
+          <p>表格数据解析入库，智能分析与格式化输出</p>
+        </div>
+        <div class="scene-card" style="--dot: var(--c-combined)" onclick="location.href='/playground?scene=combined'">
+          <div class="ico">🧬</div>
+          <h4>组合处理</h4>
+          <p>文本 + 图片 + 表格多源输入，组合智能分析</p>
+        </div>
+      </section>
+
+      <!-- 模板流程 -->
+      <div class="section-title">内置编排模板<span class="more"><a href="/flows">管理全部流程 →</a></span></div>
+      <section class="tpl-grid" id="tplGrid">
+        <div class="empty" style="grid-column: 1 / -1"><div class="big">⏳</div>正在加载模板…</div>
+      </section>
+    </main>
+  </div>
+</div>
+<div id="toastWrap"></div>
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/dashboard.js}"></script>
+</body>
+</html>

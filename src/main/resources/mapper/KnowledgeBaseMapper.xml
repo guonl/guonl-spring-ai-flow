@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.guonl.flow.db.mapper.KnowledgeBaseMapper">
+
+    <resultMap id="BaseResultMap" type="com.guonl.flow.db.entity.KnowledgeBaseDO">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="doc_count" property="docCount"/>
+        <result column="chunk_count" property="chunkCount"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.guonl.flow.db.entity.KnowledgeBaseDO"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO flow_knowledge (name, description)
+        VALUES (#{name}, #{description})
+    </insert>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT k.id, k.name, k.description, k.created_at, k.updated_at,
+               COALESCE(d.doc_count, 0) AS doc_count,
+               COALESCE(d.chunk_count, 0) AS chunk_count
+        FROM flow_knowledge k
+        LEFT JOIN (
+            SELECT kb_id, COUNT(*) AS doc_count, SUM(chunk_count) AS chunk_count
+            FROM flow_knowledge_doc WHERE status = 'READY' GROUP BY kb_id
+        ) d ON d.kb_id = k.id
+        WHERE k.id = #{id}
+    </select>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT k.id, k.name, k.description, k.created_at, k.updated_at,
+               COALESCE(d.doc_count, 0) AS doc_count,
+               COALESCE(d.chunk_count, 0) AS chunk_count
+        FROM flow_knowledge k
+        LEFT JOIN (
+            SELECT kb_id, COUNT(*) AS doc_count, SUM(chunk_count) AS chunk_count
+            FROM flow_knowledge_doc WHERE status = 'READY' GROUP BY kb_id
+        ) d ON d.kb_id = k.id
+        ORDER BY k.updated_at DESC
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM flow_knowledge WHERE id = #{id}
+    </delete>
+</mapper>

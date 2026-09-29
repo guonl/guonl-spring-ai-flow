@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>流程库 · Spring AI Flow</title>
+  <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/flow.css}">
+</head>
+<body>
+<div class="app">
+  <div th:replace="~{fragments/layout :: sidebar('flows')}"></div>
+  <div class="main">
+    <header th:replace="~{fragments/layout :: topbar('流程库')}"></header>
+
+    <main class="page">
+      <div class="list-toolbar">
+        <input id="flowSearch" class="input" type="search" placeholder="搜索流程名称 / 描述…" style="max-width:320px">
+        <span id="flowTotal" style="color:var(--text-3); font-size:13px"></span>
+      </div>
+      <div class="flow-grid" id="flowGrid">
+        <!-- 新建卡片 -->
+        <a class="flow-card" href="/flow-editor" style="align-items:center; justify-content:center; border-style:dashed; color:var(--text-3); min-height:150px;">
+          <div style="text-align:center">
+            <div style="font-size:30px">＋</div>
+            <div style="margin-top:6px; font-size:13.5px">新建空白流程</div>
+          </div>
+        </a>
+      </div>
+      <div class="empty" id="flowEmpty" style="display:none; grid-column:1/-1;">
+        <div class="big">🍃</div>
+        <div>暂无流程，点击上方「新建空白流程」或从工作台模板复制开始</div>
+      </div>
+      <div class="pager" id="flowPager" style="display:none"></div>
+    </main>
+  </div>
+</div>
+<div id="toastWrap"></div>
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/flows.js}"></script>
+</body>
+</html>

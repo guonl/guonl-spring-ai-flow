@@ -1,0 +1,174 @@
+# =====================================================================
+# 生产环境配置（application-prod.yml）
+# 激活方式：--spring.profiles.active=prod 或环境变量 SPRING_PROFILES_ACTIVE=prod
+# 默认开发环境在 application.yml 中声明（active: dev），本文件不重复声明。
+#
+# 本文件不携带任何默认值：所有环境相关项均为 ${VAR} 形式，
+# 对应环境变量未注入时应用启动即失败（占位符无法解析），避免带错误默认值上线。
+#
+# 必须注入的环境变量清单：
+#   SERVER_PORT                     服务端口（如 8080）
+#   MYSQL_HOST / MYSQL_PORT / MYSQL_DB / MYSQL_USERNAME / MYSQL_PASSWORD
+#   OPENAI_API_KEY / OPENAI_BASE_URL     大模型网关密钥与地址（base-url 须以 /v1 结尾）
+#   FLOW_AI_PROVIDER                     AI 服务模式：llm | mock
+#   FLOW_AI_TEXT_MODEL / FLOW_AI_VISION_MODEL   文本/视觉模型名
+#   MCP_CLIENT_ENABLED                   MCP 客户端开关（true | false）
+#   FLOW_MCP_EXPOSE                      是否把流程暴露为 MCP tools（true | false）
+#   FLOW_ASSISTANT_ENABLED / FLOW_ASSISTANT_PROVIDER / FLOW_ASSISTANT_MODEL / FLOW_ASSISTANT_TOOLS
+#   FLOW_KB_EMBEDDING_BASE_URL / FLOW_KB_EMBEDDING_API_KEY / FLOW_KB_EMBEDDING_MODEL
+# =====================================================================
+
+spring:
+  application:
+    name: guonl-spring-ai-flow
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 40MB
+  thymeleaf:
+    # 生产开启模板缓存（dev 为 false 便于热改页面）
+    cache: true
+  datasource:
+    # MySQL 连接（库：guonl_ai_flow），凭据全部由环境变量注入
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DB}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+  ai:
+    openai:
+      # Spring AI OpenAI 兼容网关（provider=llm 时生效）
+      # 注意：Spring AI 2.x 基于 openai-java SDK，base-url 即 API 根（SDK 在其后拼 /chat/completions），
+      # 必须以 /v1 结尾；如 DashScope 兼容端点为 https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${OPENAI_API_KEY}
+      base-url: ${OPENAI_BASE_URL}
+      chat:
+        options:
+          # 由 AiInvoker 按节点覆盖 model，这里给默认值避免启动警告
+          model: ${FLOW_AI_TEXT_MODEL}
+    # JDBC会话记忆：记忆消息持久化到MySQL（表 SPRING_AI_CHAT_MEMORY）
+    # initialize-schema=always 启动时执行jar内schema-mysql.sql（CREATE TABLE IF NOT EXISTS，幂等）；
+    # 若生产表结构由 DBA 统一管理，可改为 never
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: always
+    # MCP Server：把已保存的流程暴露为 MCP tools，外部AI客户端（Claude/Cursor等）可直接调用
+    mcp:
+      server:
+        name: guonl-ai-flow
+        version: 0.0.1
+        instructions: 本服务把AI流程编排产品中已保存的流程暴露为工具。每个工具对应一个流程，输入文本后同步返回流程执行结果。
+        type: SYNC
+        protocol: STATELESS
+        annotation-scanner:
+          enabled: true
+        capabilities:
+          tool: true
+          resource: true
+          prompt: true
+        streamable-http:
+          mcp-endpoint: /guonl/ai/mcp
+        tool-response-mime-type:
+          fp-getBusinessUnitData: application/json
+
+      # MCP Client：连接外部 MCP server，发现的工具作为工具调用节点的工具来源（GET /api/mcp/tools 可查看清单）
+      # 通过环境变量 MCP_CLIENT_ENABLED 控制开关（无外部 server 时保持 false，开启会阻塞启动）
+      client:
+        enabled: ${MCP_CLIENT_ENABLED}
+        toolcallback:
+          enabled: true
+      # 开启示例：把环境变量 MCP_CLIENT_ENABLED=true，并取消下列注释（url 为外部 MCP server 根地址）
+      # 注意：不要指向本进程自身（客户端在启动早期抢先连接，而Web容器尚未监听，会导致initialize超时、启动失败）；
+      #       环境变量方式覆盖连接地址需带 SPRING_ 前缀，如 SPRING_AI_MCP_CLIENT_SSE_CONNECTIONS_DEMO_URL
+      # sse:
+      #   connections:
+      #     demo:
+      #       url: http://localhost:8080
+      #       sse-endpoint: /sse
+    # 多模态模型（provider=llm 时按需启用，需网关支持对应端点；mock模式自动使用本地模拟实现，无需配置）
+    # model:
+    #   image: openai            # 图片生成节点（/v1/images/generations）
+    #   moderation: openai       # 内容审核节点（/v1/moderations）
+    #   audio:
+    #     transcription: openai  # 语音输入转录（/v1/audio/transcriptions）
+
+server:
+  port: ${SERVER_PORT}
+
+flow:
+  ai:
+    # mock=本地模拟（无需密钥，返回模拟数据，便于体验完整交互）
+    # llm=经 Spring AI OpenAI 兼容协议直连大模型（生产固定注入 llm）
+    provider: ${FLOW_AI_PROVIDER}
+    text-model: ${FLOW_AI_TEXT_MODEL}
+    vision-model: ${FLOW_AI_VISION_MODEL}
+    temperature: 0.3
+    node-timeout-seconds: 180
+    executor-pool-size: 8
+    mock-delay-millis: 900
+    # 结构化输出纠错重试次数
+    output-retry-attempts: 2
+    # 瞬时错误重试与降级
+    invoke-retry-attempts: 2
+    retry-backoff-millis: 500
+    fallback-model: ""
+  excel:
+    # Excel送入模型的最大行数
+    max-rows: 1000
+  mcp:
+    expose:
+      # 是否把流程列表暴露为MCP tools（关闭后MCP server为空工具集）
+      enabled: ${FLOW_MCP_EXPOSE}
+      # MCP tool调用流程后的同步等待超时（秒）
+      wait-timeout-seconds: 180
+  assistant:
+    # AI 助手总开关（false 时悬浮窗不注入、助手API返回禁用提示）
+    enabled: ${FLOW_ASSISTANT_ENABLED}
+    # 助手模型服务模式：空=跟随 flow.ai.provider | mock | llm
+    provider: ${FLOW_ASSISTANT_PROVIDER}
+    # 助手模型覆盖：空=跟随 flow.ai.text-model
+    model: ${FLOW_ASSISTANT_MODEL}
+    temperature: 0.3
+    # 会话记忆窗口轮数
+    memory-turns: 10
+    # 助手工具集开关（流程/运行/知识库查询 + NL建流程；仅 provider=llm 生效，mock 不走工具链路）
+    tools-enabled: ${FLOW_ASSISTANT_TOOLS}
+    # 单条用户消息最大长度
+    max-message-length: 4000
+    # 单次回答超时（秒）
+    timeout-seconds: 120
+  knowledge:
+    # 独立 embedding 服务：配置 base-url 后知识库上传/检索走该服务，
+    # 不再复用 spring.ai.openai 的模型网关——适用于网关未开通 /v1/embeddings 的场景（上传报 404 Model configuration not found）。
+    # 注意：切换 embedding 实现后向量空间随之变化，已上传文档需删除后重新上传。
+    embedding:
+      base-url: ${FLOW_KB_EMBEDDING_BASE_URL}   # OpenAI 兼容端点，须带 /v1
+      api-key: ${FLOW_KB_EMBEDDING_API_KEY}
+      model: ${FLOW_KB_EMBEDDING_MODEL}
+      # dimensions: 1024   # 可选；不配则首次调用时自动探测（bge-m3 默认 1024）
+      # 注意：Qwen/Qwen3-Embedding-8B 实测单次请求 30s+（服务端排队），不建议用于交互式检索；向量在服务端缓存不足时更慢
+
+# MyBatis：Mapper XML 位置 + 下划线转驼峰
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+# Actuator 可观测：暴露健康检查与指标（Spring AI 在 provider=llm 时自动记录 spring.ai.chat.* 指标）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  observations:
+    # 自定义注解/HTTP观测保留key-values，便于按流程/节点维度排查
+    key-values:
+      application: guonl-spring-ai-flow
+
+# SpringDoc OpenAPI（Swagger 文档与调试页）
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs

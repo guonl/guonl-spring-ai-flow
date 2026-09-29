@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>流程编排 · Spring AI Flow</title>
+  <link rel="icon" th:href="@{/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/flow.css}">
+</head>
+<body>
+<div class="app">
+  <div th:replace="~{fragments/layout :: sidebar('flows')}"></div>
+  <div class="main page-full">
+
+    <!-- 编辑器工具栏 -->
+    <div class="editor-toolbar">
+      <a class="btn btn-ghost btn-sm" href="/flows">← 流程库</a>
+      <span class="divider"></span>
+      <input class="flow-name" id="flowName" placeholder="未命名流程" maxlength="60">
+      <input class="input" id="flowDescInput" placeholder="流程描述（可选）" maxlength="120"
+             style="width:220px; border-color:transparent; background:transparent; font-size:12.5px">
+      <span class="badge badge-pending" id="flowIdBadge" style="display:none"></span>
+      <span style="flex:1"></span>
+      <span class="text-3" id="saveState" style="font-size:12px"></span>
+      <button class="btn btn-sm" id="btnValidate">校验</button>
+      <button class="btn btn-sm" id="btnSave">保存</button>
+      <button class="btn btn-primary btn-sm" id="btnRun">▶ 运行</button>
+    </div>
+
+    <div class="editor-body">
+      <!-- 左侧节点面板 -->
+      <aside class="node-panel">
+        <h5>节点类型 · 拖入画布</h5>
+        <div class="palette-item" draggable="true" data-type="TEXT" style="--dot: var(--c-text)">
+          <div class="ico">📝</div>
+          <div><b>文本理解</b><span>纯文字输入</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="IMAGE" style="--dot: var(--c-image)">
+          <div class="ico">🖼️</div>
+          <div><b>图片识别</b><span>图片多模态输入</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="JSON" style="--dot: var(--c-json)">
+          <div class="ico">🧩</div>
+          <div><b>JSON 处理</b><span>JSON 数据加工</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="EXCEL" style="--dot: var(--c-excel)">
+          <div class="ico">📊</div>
+          <div><b>Excel 处理</b><span>表格数据输入</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="COMBINED" style="--dot: var(--c-combined)">
+          <div class="ico">🧬</div>
+          <div><b>组合处理</b><span>多源组合输入</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="ROUTER" style="--dot: var(--c-router)">
+          <div class="ico">🔀</div>
+          <div><b>条件路由</b><span>按内容选择分支</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="TOOL" style="--dot: var(--c-tool)">
+          <div class="ico">🔧</div>
+          <div><b>工具调用</b><span>时间/计算/网页/JSON</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="KNOWLEDGE" style="--dot: var(--c-knowledge)">
+          <div class="ico">📚</div>
+          <div><b>知识检索</b><span>知识库RAG增强问答</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="IMAGE_GEN" style="--dot: var(--c-image-gen)">
+          <div class="ico">🎨</div>
+          <div><b>图片生成</b><span>提示词文生图</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="MODERATION" style="--dot: var(--c-moderation)">
+          <div class="ico">🛡️</div>
+          <div><b>内容审核</b><span>违规类别检测分流</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="EVALUATE" style="--dot: var(--c-evaluate)">
+          <div class="ico">⚖️</div>
+          <div><b>输出评估</b><span>LLM-as-judge 质量打分</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="SUBFLOW" style="--dot: var(--c-subflow)">
+          <div class="ico">📦</div>
+          <div><b>子流程</b><span>引用其他流程作为宏</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div class="palette-item" draggable="true" data-type="AGGREGATE" style="--dot: var(--c-aggregate)">
+          <div class="ico">🧲</div>
+          <div><b>聚合</b><span>不经模型合并多上游输出</span></div>
+          <span class="dragger">⠿</span>
+        </div>
+        <div style="font-size:11px; color:var(--text-3); margin-top:14px; line-height:1.7">
+          拖拽节点到画布，从右侧圆点拖出连线到目标节点。点击节点编辑提示词与输出契约。
+        </div>
+      </aside>
+
+      <!-- 画布 -->
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="canvas" id="canvas">
+          <svg class="wires" id="wires"></svg>
+          <!-- 节点由 editor.js 动态渲染 -->
+        </div>
+        <div class="zoom-ctrl">
+          <button type="button" id="zoomFit" title="全屏">⛶</button>
+          <button type="button" id="zoomOut" title="缩小">−</button>
+          <span class="zoom-val" id="zoomVal" title="点击重置为 100%">100%</span>
+          <button type="button" id="zoomIn" title="放大">＋</button>
+        </div>
+      </div>
+
+      <!-- 右侧属性面板 -->
+      <aside class="editor-props" id="propsPanel">
+        <div class="no-select">点击画布中的节点<br>编辑属性与输出契约</div>
+      </aside>
+    </div>
+  </div>
+</div>
+<div id="toastWrap"></div>
+<script th:inline="javascript">
+  window.__FLOW_ID__ = /*[[${flowId}]]*/ null;
+</script>
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/editor.js}"></script>
+</body>
+</html>

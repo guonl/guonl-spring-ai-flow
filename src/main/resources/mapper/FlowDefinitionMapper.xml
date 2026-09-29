@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.guonl.flow.db.mapper.FlowDefinitionMapper">
+
+    <resultMap id="BaseResultMap" type="com.guonl.flow.db.entity.FlowDefinitionDO">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="nodes" property="nodesJson"/>
+        <result column="edges" property="edgesJson"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, name, description, nodes, edges, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.guonl.flow.db.entity.FlowDefinitionDO">
+        INSERT INTO flow_definition (id, name, description, nodes, edges, created_at, updated_at)
+        VALUES (#{id}, #{name}, #{description}, #{nodesJson}, #{edgesJson},
+                COALESCE(#{createdAt}, NOW()), COALESCE(#{updatedAt}, NOW()))
+    </insert>
+
+    <update id="update" parameterType="com.guonl.flow.db.entity.FlowDefinitionDO">
+        UPDATE flow_definition
+        SET name = #{name},
+            description = #{description},
+            nodes = #{nodesJson},
+            edges = #{edgesJson},
+            updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM flow_definition WHERE id = #{id}
+    </delete>
+
+    <select id="findById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM flow_definition
+        WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM flow_definition
+        ORDER BY updated_at DESC
+    </select>
+
+    <select id="searchPage" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM flow_definition
+        <if test="keyword != null and keyword != ''">
+            WHERE name LIKE CONCAT('%', #{keyword}, '%')
+               OR description LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        ORDER BY updated_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countSearch" resultType="long">
+        SELECT COUNT(*)
+        FROM flow_definition
+        <if test="keyword != null and keyword != ''">
+            WHERE name LIKE CONCAT('%', #{keyword}, '%')
+               OR description LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+    </select>
+</mapper>
